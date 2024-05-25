@@ -1,7 +1,11 @@
+#include <dirent.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <time.h>
 #include <unistd.h>
 
 // structs  for tree N-ario
@@ -94,6 +98,14 @@ TreeNode *getNodeIndex(LList *list, int index) {
 
 // TODO: code for the tree
 
+TreeNode *createTreeNode(char *name, char *extencion, int type) {
+  TreeNode *current = (TreeNode *)malloc(sizeof(TreeNode));
+  current->name = name;
+  current->extension = name;
+  current->type = type;
+  return current;
+}
+
 TreeNode *searchNodeParams(LList *list, TreeNode *value, int pos) {
   if (pos == -1)
     pos = 0;
@@ -132,7 +144,82 @@ TreeNode *searchNode(Tree *tree, TreeNode *value) {
   return NULL;
 }
 
-int insertTreeNode(Tree *tree, TreeNode *parent, TreeNode *value) { return 0; }
+int insertTreeNode(Tree *tree, TreeNode *parent, TreeNode *value) {
+  if (tree->root == NULL) {
+    tree->root = value;
+    return 1;
+  }
+
+  if (strcmp(parent->name, tree->root->name) == 0) {
+    if (parent->type == tree->root->type) {
+      parent = tree->root;
+      return 1;
+    }
+  } else {
+    parent = searchNodeParams(tree->root->childrens, parent, -1);
+  }
+
+  if (parent != NULL) {
+    insertList(value, parent->childrens);
+    return 1;
+  }
+  return 0;
+}
+
+void printTree(TreeNode *root, int pos) {
+  if (pos == -1)
+    pos = 0;
+
+  if (root == NULL)
+    return;
+  printf("%s\n", root->name);
+
+  if (root->childrens->size == 0)
+    return;
+
+  TreeNode *current = getNodeIndex(root->childrens, pos);
+  if (current == NULL)
+    return;
+  printTree(current, -1);
+
+  printTree(root, pos + 1);
+}
+
+// TODO: Code for the validation data beofre insert in tree
+
+int isDirectory(char *path) {
+  struct stat path_stat;
+  stat(path, &path_stat);
+  return S_ISDIR(path_stat.st_mode);
+}
+
+char *concatPath(char *path, char *name) {
+  char *tmp = (char *)malloc(strlen(path) + strlen(name) + 2);
+  strcpy(tmp, path);
+  strcat(tmp, "/");
+  strcat(tmp, name);
+  return tmp;
+}
+// TODO: code for manipulation of directories and insert in tree
+
+void loadChildren(char *path, Tree *tree) {
+  char *tmp2;
+  DIR *dir;
+  struct dirent *entry;
+
+  if (!(dir = opendir(path))) {
+    perror("ERROR");
+    return;
+  }
+
+  while ((entry = readdir(dir)) != NULL) {
+    if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0 ||
+        strcmp(entry->d_name, ".git") == 0 ||
+        strcmp(entry->d_name, "node_modules") == 0)
+      continue;
+    tmp2 = concatPath(path, entry->d_name);
+  }
+}
 
 int main(int argc, char *argv[]) {
   char *name;
@@ -142,5 +229,10 @@ int main(int argc, char *argv[]) {
   } else {
     name = getcwd(buff, PATH_MAX);
   }
+
+  printf("%s\n", name);
+  Tree *tree;
+  loadChildren(name, tree);
+
   return 0;
 }

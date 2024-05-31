@@ -7,7 +7,17 @@
 #include <unistd.h>
 
 #define PATH_MAX 4096
+// colors
+#define RED "\x1b[31m"
+#define CYAN "\x1b[36m"
+#define WHITE "\x1b[37m"
+#define YELLOW "\x1b[33m"
+#define RESET "\x1b[0m"
 
+#define horizontalChild "\xe2\x94\x9c\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80"
+#define finalHorizontalChild "\xe2\x94\x94\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80"
+#define verticalLine "\xe2\x94\x82"
+#define simpleLine "\xe2\x94\x80"
 // structs  for tree N-ario
 typedef struct NArioTree {
   struct TreeNode *root;
@@ -27,7 +37,7 @@ typedef struct TreeNode {
   unsigned type : 1;
   unsigned visited : 1;
   int spaces;
-  int color;
+  char *color;
   struct LList *childrens;
 } TreeNode;
 
@@ -95,10 +105,11 @@ TreeNode *createTreeNode(char *name, char *path, int type, int spaces) {
   current->visited = 0;
   current->spaces = spaces;
   current->childrens = createList();
-  if (type == 1)
-    current->color = 1;
-  else
-    current->color = 0;
+  if (type == 1) {
+    current->color = YELLOW;
+  } else {
+    current->color = CYAN;
+  }
   return current;
 }
 
@@ -139,31 +150,39 @@ int insertTreeNode(Tree *tree, char *pathParent, TreeNode *value) {
   return 0;
 }
 
-void printTree(TreeNode *node, int pos) {
-
-  if (pos == -1)
-    pos = 0;
-
+void printTree(TreeNode *node, char *prefix, int isLast) {
   if (node == NULL)
     return;
 
-  if (node->visited == 0) {
-    char *spaces = (char *)malloc(node->spaces);
-    for (int i = 0; i < node->spaces; i++) {
-      spaces[i] = ' ';
-    }
-    printf("%s file Name: %s\n", spaces, node->name);
-    node->visited = 1;
+  printf("%s", prefix);
+  if (strcmp(node->name, ".") == 0) {
+    printf("%s%s%s\n", RED, node->path, RESET);
+  } else if (isLast) {
+    printf("%s%s %s%s%s\n", WHITE, finalHorizontalChild, node->color,
+           node->name, RESET);
+  } else {
+    printf("%s%s %s%s%s\n", WHITE, horizontalChild, node->color, node->name,
+           RESET);
   }
 
-  if (node->childrens->size == 0)
-    return;
+  char newPrefix[PATH_MAX];
+  strcpy(newPrefix, prefix);
+  if (isLast) {
+    strcat(newPrefix, "    ");
+  } else {
+    if (strcmp(node->name, ".") == 0) {
+      strcat(newPrefix, "    ");
+    } else {
 
-  TreeNode *current = getNodeIndex(node->childrens, pos);
-  if (current == NULL)
-    return;
-  printTree(current, -1);
-  printTree(node, pos + 1);
+      strcat(newPrefix, verticalLine "   ");
+    }
+  }
+
+  SNode *current = node->childrens->head;
+  while (current != NULL) {
+    printTree(current->data, newPrefix, current->next == NULL);
+    current = current->next;
+  }
 }
 
 // TODO: Code for the validation data beofre insert in tree
@@ -202,29 +221,45 @@ void loadChildren(char *path, Tree *tree, int spaces) {
         createTreeNode(entry->d_name, tmp2, isDirectory(tmp2), spaces);
     int res = insertTreeNode(tree, path, tmp1);
     if (tmp1->type == 1 && res == 1) {
-      loadChildren(tmp2, tree, spaces + 2);
+      loadChildren(tmp2, tree, spaces + 7);
     }
   }
 }
 
 int main(int argc, char *argv[]) {
-  char *name;
-  char buff[PATH_MAX];
+  char *initialPath;
+  char *tmp[argc - 2];
+  char *fileNames;
+  printf("%d\n", argc);
   if (argc == 2) {
-    name = argv[1];
+    if (strcmp(argv[1], "-h") == 0) {
+      printf("Usage: main                             shows the content of the "
+             "current path\n");
+      printf("Usage: main [path]                      shows the content of the "
+             "entered route \n");
+      printf(
+          "Usage: main [path] -ef [nameDirectory]  displays the contents of "
+          "the entered path and excludes directories with the entered names\n");
+      return 0;
+    } else {
+      initialPath = argv[1];
+      tmp[0] = "node_modules";
+      tmp[1] = ".git";
+    }
+  } else if (argc > 2) {
+    exit(0);
   } else {
-    name = getcwd(buff, PATH_MAX);
+    char buff[PATH_MAX];
+    initialPath = getcwd(buff, PATH_MAX);
+    // fileNames[0] = "node_modules";
+    // fileNames[1] = ".git";
   }
 
   Tree *tree = malloc(sizeof(Tree));
-  TreeNode *root = createTreeNode(".", name, isDirectory(name), 0);
+  TreeNode *root =
+      createTreeNode(".", initialPath, isDirectory(initialPath), 0);
   tree->root = root;
-  loadChildren(name, tree, 1);
-  printTree(tree->root, -1);
-  char tmp[6] = "\e[31m";
-  printf("%s \xe2\x94\x80 \n", tmp);
-  printf("%s \xe2\x94\x8a \n", tmp);
-  printf("%s \xe2\x94\x94 \n", tmp);
-  printf("%s \xe2\x94\x9c \n", tmp);
+  loadChildren(initialPath, tree, 1);
+  printTree(tree->root, "", 0);
   return 0;
 }

@@ -26,3 +26,4 @@ check: $(TARGET)
 
 clean:
 	rm -rf $(SRC_DIR)/*.o $(TARGET)
+	

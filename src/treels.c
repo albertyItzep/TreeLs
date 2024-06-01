@@ -7,6 +7,8 @@
 #include <unistd.h>
 
 #define PATH_MAX 4096
+// versio;
+#define VERSION "1.0.0"
 // colors
 #define RED "\x1b[31m"
 #define CYAN "\x1b[36m"
@@ -36,7 +38,6 @@ typedef struct TreeNode {
   char *path;
   unsigned type : 1;
   unsigned visited : 1;
-  int spaces;
   char *color;
   struct LList *childrens;
 } TreeNode;
@@ -97,13 +98,12 @@ TreeNode *getNodeIndex(LList *list, int index) {
 
 // TODO: code for the tree
 
-TreeNode *createTreeNode(char *name, char *path, int type, int spaces) {
+TreeNode *createTreeNode(char *name, char *path, int type) {
   TreeNode *current = (TreeNode *)malloc(sizeof(TreeNode));
   current->name = name;
   current->path = path;
   current->type = type;
   current->visited = 0;
-  current->spaces = spaces;
   current->childrens = createList();
   if (type == 1) {
     current->color = YELLOW;
@@ -200,9 +200,22 @@ char *concatPath(char *path, char *name) {
   strcat(tmp, name);
   return tmp;
 }
+
 // TODO: code for manipulation of directories and insert in tree
 
-void loadChildren(char *path, Tree *tree, int spaces) {
+int excludeDir(char *name, char **fileNames, int sizeOfFilename) {
+  for (int i = 0; i < sizeOfFilename; i++) {
+    if (fileNames[i] == NULL)
+      return 0;
+    if (strcmp(name, fileNames[i]) == 0) {
+      return 1;
+    }
+  }
+  return 0;
+}
+
+void loadChildren(char *path, char **fileNames, int sizeOfFilename,
+                  Tree *tree) {
   char *tmp2;
   DIR *dir;
   struct dirent *entry;
@@ -213,53 +226,74 @@ void loadChildren(char *path, Tree *tree, int spaces) {
   }
 
   while ((entry = readdir(dir)) != NULL) {
-    if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0 ||
-        strcmp(entry->d_name, "node_modules") == 0)
+    if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
       continue;
     tmp2 = concatPath(path, entry->d_name);
-    TreeNode *tmp1 =
-        createTreeNode(entry->d_name, tmp2, isDirectory(tmp2), spaces);
+    TreeNode *tmp1 = createTreeNode(entry->d_name, tmp2, isDirectory(tmp2));
     int res = insertTreeNode(tree, path, tmp1);
+    int tmpF = excludeDir(entry->d_name, fileNames, sizeOfFilename);
     if (tmp1->type == 1 && res == 1) {
-      loadChildren(tmp2, tree, spaces + 7);
+      if (tmpF == 0) {
+        loadChildren(tmp2, fileNames, sizeOfFilename, tree);
+      }
+      continue;
     }
   }
 }
 
 int main(int argc, char *argv[]) {
   char *initialPath;
-  char *tmp[argc - 2];
-  char *fileNames;
-  printf("%d\n", argc);
+  int tmpSize = (argc == 1) ? 2 : argc;
+  char **array = malloc(tmpSize * sizeof(char *));
   if (argc == 2) {
     if (strcmp(argv[1], "-h") == 0) {
-      printf("Usage: main                             shows the content of the "
-             "current path\n");
-      printf("Usage: main [path]                      shows the content of the "
-             "entered route \n");
+      printf("usage: treels -h                       shows the help\n");
+      printf("usage: treels --version                 shows the version\n");
+      printf("usage: treels -v                        shows the version\n");
       printf(
-          "Usage: main [path] -ef [nameDirectory]  displays the contents of "
+          "Usage: treels                             shows the content of the "
+          "current path\n");
+      printf(
+          "Usage: treels [path]                      shows the content of the "
+          "entered route \n");
+      printf(
+          "Usage: treels [path] -ef [nameDirectory]  displays the contents of "
           "the entered path and excludes directories with the entered names\n");
       return 0;
+    } else if (strcmp(argv[1], "--version") == 0 ||
+               strcmp(argv[1], "-v") == 0) {
+      printf("Version: %s\n", VERSION);
+      exit(0);
     } else {
       initialPath = argv[1];
-      tmp[0] = "node_modules";
-      tmp[1] = ".git";
+      array[0] = "node_modules";
+      array[1] = ".git";
     }
   } else if (argc > 2) {
-    exit(0);
+    initialPath = argv[1];
+    if (strcmp(argv[2], "-ef") == 0) {
+      for (int i = 2; i < argc; i++) {
+        array[i - 2] = strdup(argv[i]);
+        if (array[i - 2] == NULL) {
+          printf("ERROR: Memory allocation failed\n");
+          exit(0);
+        }
+      }
+    } else if (strcmp(argv[2], "-ef") != 0) {
+      printf("ERROR: Invalid argumets\n");
+      exit(0);
+    }
   } else {
     char buff[PATH_MAX];
     initialPath = getcwd(buff, PATH_MAX);
-    // fileNames[0] = "node_modules";
-    // fileNames[1] = ".git";
+    array[0] = "node_modules";
+    array[1] = ".git";
   }
 
   Tree *tree = malloc(sizeof(Tree));
-  TreeNode *root =
-      createTreeNode(".", initialPath, isDirectory(initialPath), 0);
+  TreeNode *root = createTreeNode(".", initialPath, isDirectory(initialPath));
   tree->root = root;
-  loadChildren(initialPath, tree, 1);
+  loadChildren(initialPath, array, tmpSize, tree);
   printTree(tree->root, "", 0);
   return 0;
 }

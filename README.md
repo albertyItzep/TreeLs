@@ -7,7 +7,6 @@ Treels is a tool that displays the contents of a directory in a tree structure.
 
 - Show the directory tree of the current directory
 - Show the directory tree of a specified path
-- ✨Magic ✨
 
 ## Features
 

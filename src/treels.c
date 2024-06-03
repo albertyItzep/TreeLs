@@ -19,7 +19,6 @@
 #define horizontalChild "\xe2\x94\x9c\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80"
 #define finalHorizontalChild "\xe2\x94\x94\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80"
 #define verticalLine "\xe2\x94\x82"
-#define simpleLine "\xe2\x94\x80"
 // structs  for tree N-ario
 typedef struct NArioTree {
   struct TreeNode *root;
@@ -37,7 +36,6 @@ typedef struct TreeNode {
   char *name;
   char *path;
   unsigned type : 1;
-  unsigned visited : 1;
   char *color;
   struct LList *childrens;
 } TreeNode;
@@ -103,7 +101,6 @@ TreeNode *createTreeNode(char *name, char *path, int type) {
   current->name = name;
   current->path = path;
   current->type = type;
-  current->visited = 0;
   current->childrens = createList();
   if (type == 1) {
     current->color = YELLOW;

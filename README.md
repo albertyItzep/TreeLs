@@ -1,7 +1,7 @@
 # Treels
 
 ## _A Directory Tree Listing Tool_
-![screenshot of Treels]
+![screenshot of Treels](doc/treels.png)
 
 Treels is a tool that displays the contents of a directory in a tree structure.
 

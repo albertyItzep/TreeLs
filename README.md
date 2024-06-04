@@ -32,7 +32,7 @@ To install Treels, follow these steps:
 
 1. Clone the repository:
     ```sh
-    git clone https://github.com/yourusername/treels.git
+    git clone [https://github.com/yourusername/treels.git](https://github.com/albertyItzep/TreeLs.git)
     cd treels
     ```
 
